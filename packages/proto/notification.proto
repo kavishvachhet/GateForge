@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package notification;
+
+service NotificationService {
+  rpc SendEmail (EmailRequest) returns (NotificationResponse);
+  rpc SendSMS (SMSRequest) returns (NotificationResponse);
+  rpc SendPush (PushRequest) returns (NotificationResponse);
+  rpc GetNotifications (GetNotificationsRequest) returns (GetNotificationsResponse);
+}
+
+message EmailRequest {
+  string to = 1;
+  string subject = 2;
+  string body = 3;
+  string userId = 4;
+}
+
+message SMSRequest {
+  string phoneNumber = 1;
+  string message = 2;
+  string userId = 3;
+}
+
+message PushRequest {
+  string deviceToken = 1;
+  string title = 2;
+  string body = 3;
+  string userId = 4;
+}
+
+message NotificationResponse {
+  bool success = 1;
+  string message = 2;
+  string notificationId = 3;
+}
+
+message GetNotificationsRequest {
+  string userId = 1;
+  int32 page = 2;
+  int32 limit = 3;
+}
+
+message NotificationItem {
+  string id = 1;
+  string type = 2;
+  string message = 3;
+  bool read = 4;
+  string createdAt = 5;
+}
+
+message GetNotificationsResponse {
+  repeated NotificationItem notifications = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
