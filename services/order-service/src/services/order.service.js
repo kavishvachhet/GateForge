@@ -1,6 +1,6 @@
 const Order = require('../models/Order');
-const { inventoryGrpcClient } = require('../config');
-const { NotFoundError, ValidationError, createLogger } = require('shared-lib');
+const { publishEvent, inventoryGrpcClient } = require('../config');
+const { NotFoundError, ValidationError, KAFKA_TOPICS, createLogger } = require('shared-lib');
 
 const logger = createLogger('order-service');
 
@@ -9,6 +9,7 @@ class OrderService {
     let totalAmount = 0;
     const validatedItems = [];
 
+    // Promisify the gRPC call
     const getProduct = (productId) => {
       return new Promise((resolve, reject) => {
         inventoryGrpcClient.GetProduct({ productId }, (err, response) => {
@@ -18,29 +19,35 @@ class OrderService {
       });
     };
 
+    // Validate each item against the Inventory Service via gRPC
     for (const item of items) {
       try {
+        // 1. Fetch real product from Inventory DB via gRPC
         const product = await getProduct(item.productId);
 
+        // 2. Check stock: is quantity available?
         if (product.stock < item.quantity) {
           throw new ValidationError(
             `Insufficient stock for "${product.name}". Requested: ${item.quantity}, Available: ${product.stock}`
           );
         }
 
-        const realPrice = product.price;
-        const itemTotal = realPrice * item.quantity;
+        // 3. Simple math: price = realPrice * quantity
+        const realPrice = product.price;       // e.g. ₹599.99
+        const itemTotal = realPrice * item.quantity; // e.g. ₹599.99 * 2 = ₹1199.98
         totalAmount += itemTotal;
 
         validatedItems.push({
           productId: item.productId,
           productName: product.name,
           quantity: item.quantity,
-          price: realPrice,
-          itemTotal: itemTotal,
+          price: realPrice,       // per-unit price from DB
+          itemTotal: itemTotal,   // price * quantity
         });
       } catch (error) {
+        // Re-throw our own operational errors (ValidationError, NotFoundError)
         if (error.isOperational) throw error;
+        // gRPC NOT_FOUND = product doesn't exist
         if (error.code === 5) {
           throw new NotFoundError(`Product with ID "${item.productId}" does not exist in inventory.`);
         }
@@ -48,8 +55,18 @@ class OrderService {
       }
     }
 
+    // Save to database
     const order = new Order({ userId, items: validatedItems, totalAmount });
     await order.save();
+
+    // Publish event for Inventory Service to reserve stock
+    // and Notification Service to send an email
+    await publishEvent(KAFKA_TOPICS.ORDER_CREATED, order.id, {
+      orderId: order.id,
+      userId: order.userId,
+      items: order.items,
+      totalAmount: order.totalAmount,
+    });
 
     return order;
   }
@@ -75,6 +92,44 @@ class OrderService {
     ]);
 
     return { orders, total, page, limit };
+  }
+
+  // --- Compensating Event Handlers (consumed from Kafka) ---
+
+  // Called when Inventory Service fails to reserve stock
+  async handleOrderFailed(orderId, reason) {
+    try {
+      const order = await Order.findByIdAndUpdate(
+        orderId,
+        { status: 'FAILED' },
+        { new: true }
+      );
+      if (order) {
+        logger.warn(`❌ Order ${orderId} marked as FAILED. Reason: ${reason}`);
+      } else {
+        logger.error(`Order ${orderId} not found when trying to mark as FAILED`);
+      }
+    } catch (error) {
+      logger.error(`Error handling ORDER_FAILED for ${orderId}:`, error.message);
+    }
+  }
+
+  // Called when Inventory Service successfully reserves stock
+  async handleInventoryReserved(orderId) {
+    try {
+      const order = await Order.findByIdAndUpdate(
+        orderId,
+        { status: 'CONFIRMED' },
+        { new: true }
+      );
+      if (order) {
+        logger.info(`✅ Order ${orderId} marked as CONFIRMED — stock reserved successfully`);
+      } else {
+        logger.error(`Order ${orderId} not found when trying to mark as CONFIRMED`);
+      }
+    } catch (error) {
+      logger.error(`Error handling INVENTORY_RESERVED for ${orderId}:`, error.message);
+    }
   }
 }
 
