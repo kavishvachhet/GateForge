@@ -1,3 +1,6 @@
+/**
+ * Express controller handling REST API requests for managing user profiles.
+ */
 const userService = require('../services/user.service');
 const { createSuccessResponse, createPaginationMeta, ValidationError } = require('shared-lib');
 
@@ -21,7 +24,7 @@ class HttpController {
   }
 
   async updateUser(req, res) {
-    // Only allow updating name and email, prevent role escalation here
+
     const updateData = {
       name: req.body.name,
       email: req.body.email

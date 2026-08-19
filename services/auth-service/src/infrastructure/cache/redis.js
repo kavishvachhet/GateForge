@@ -1,3 +1,6 @@
+/**
+ * Redis client initialization for caching and token blacklisting.
+ */
 const Redis = require('ioredis');
 const config = require('../../config');
 const { createLogger } = require('shared-lib');
@@ -8,7 +11,7 @@ const redisClient = new Redis({
   host: config.redis.host,
   port: config.redis.port,
   password: config.redis.password,
-  // Retry strategy prevents crashing if Redis goes down temporarily
+
   retryStrategy(times) {
     const delay = Math.min(times * 50, 2000);
     return delay;
@@ -16,11 +19,11 @@ const redisClient = new Redis({
 });
 
 redisClient.on('connect', () => {
-  logger.info('✅ Redis connected successfully (Auth Service)');
+  logger.info(' Redis connected successfully (Auth Service)');
 });
 
 redisClient.on('error', (err) => {
-  logger.error('❌ Redis connection error');
+  logger.error(' Redis connection error');
   logger.error(err);
 });
 

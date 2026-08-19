@@ -1,11 +1,12 @@
+/**
+ * Shared utility functions including standard logger and response formatters.
+ */
 const pino = require("pino");
 const { v4: uuidv4 } = require('uuid');
-
 
 function generateCorrelationId(){
     return uuidv4();
 }
-
 
 function createLogger(serviceName){
     return pino({
@@ -31,7 +32,7 @@ async function retry(fn, options = {}) {
     } catch (error) {
       lastError = error;
       if (attempt === maxRetries) break;
-      // Exponential backoff: 1s, 2s, 4s... with some randomness (jitter)
+
       const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
       const jitter = delay * 0.5 * Math.random();
       await sleep(delay + jitter);

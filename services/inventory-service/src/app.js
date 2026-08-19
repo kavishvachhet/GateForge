@@ -1,3 +1,6 @@
+/**
+ * Express application setup for the Inventory Service REST API.
+ */
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');

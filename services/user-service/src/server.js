@@ -1,3 +1,6 @@
+/**
+ * Entry point for the User Service. Initializes HTTP, Kafka, and Database connections.
+ */
 const app = require('./app');
 const { config, connectDB, connectKafka } = require('./config');
 const grpc = require('@grpc/grpc-js');
@@ -24,24 +27,23 @@ function startGrpcServer() {
   server.bindAsync(address, grpc.ServerCredentials.createInsecure(), (err, port) => {
     if (err) throw err;
     server.start();
-    logger.info(`✅ gRPC Server listening on port ${port} (User Service)`);
+    logger.info(` gRPC Server listening on port ${port} (User Service)`);
   });
 }
 
 async function bootstrap() {
   try {
     await connectDB();
-    
-    // Catch kafka errors but don't crash if it's not available in dev mode
+
     await connectKafka().catch(err => logger.warn('Kafka not available yet, continuing without it...'));
     
     startGrpcServer();
     
     app.listen(config.port, () => {
-      logger.info(`✅ HTTP Server listening on port ${config.port} (User Service)`);
+      logger.info(` HTTP Server listening on port ${config.port} (User Service)`);
     });
   } catch (error) {
-    logger.fatal('❌ Failed to start User Service', error);
+    logger.fatal(' Failed to start User Service', error);
     process.exit(1);
   }
 }

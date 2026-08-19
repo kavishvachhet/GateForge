@@ -1,3 +1,6 @@
+/**
+ * Data access layer for querying and persisting user records.
+ */
 const User = require('../../domain/entities/User');
 
 class UserRepository {

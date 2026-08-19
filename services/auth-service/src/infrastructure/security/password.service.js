@@ -1,3 +1,6 @@
+/**
+ * Utility for securely hashing and comparing passwords using bcrypt.
+ */
 const bcrypt = require('bcrypt');
 
 class PasswordService {

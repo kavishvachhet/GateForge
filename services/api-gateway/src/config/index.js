@@ -1,3 +1,6 @@
+/**
+ * Configuration settings and Redis client initialization for the API Gateway.
+ */
 require('dotenv').config();
 const Redis = require('ioredis');
 const { createLogger } = require('shared-lib');
@@ -32,7 +35,7 @@ const redisClient = new Redis({
   password: config.redis.password,
 });
 
-redisClient.on('connect', () => logger.info('✅ Redis connected successfully (API Gateway)'));
-redisClient.on('error', (err) => logger.error('❌ Redis connection error', err));
+redisClient.on('connect', () => logger.info(' Redis connected successfully (API Gateway)'));
+redisClient.on('error', (err) => logger.error(' Redis connection error', err));
 
 module.exports = { config, redisClient };

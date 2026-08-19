@@ -1,3 +1,6 @@
+/**
+ * Express application setup for the Order Service REST API.
+ */
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -23,7 +26,7 @@ app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const message = err.isOperational ? err.message : 'Internal Server Error';
 
-  if (!err.isOperational) logger.error('💥 Unhandled Error:', err);
+  if (!err.isOperational) logger.error(' Unhandled Error:', err);
   
   res.status(statusCode).json({
     success: false,

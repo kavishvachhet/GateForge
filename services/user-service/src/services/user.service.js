@@ -1,3 +1,6 @@
+/**
+ * Core business logic for retrieving and updating user profiles, integrating closely with Auth Service events.
+ */
 const User = require('../models/User');
 const { NotFoundError } = require('shared-lib');
 
@@ -34,8 +37,7 @@ class UserService {
 
   async searchUsers(query, page = 1, limit = 10) {
     const skip = (page - 1) * limit;
-    
-    // Uses the text index we created in the model
+
     const searchQuery = { $text: { $search: query } };
     
     const [users, total] = await Promise.all([

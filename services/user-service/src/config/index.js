@@ -1,3 +1,6 @@
+/**
+ * Environment configuration, MongoDB setup, and Kafka consumer to listen for user registration events.
+ */
 require('dotenv').config();
 const mongoose = require('mongoose');
 const { Kafka, logLevel } = require('kafkajs');
@@ -15,18 +18,16 @@ const config = {
   }
 };
 
-// Database Connection
 async function connectDB() {
   try {
     await mongoose.connect(config.mongoUri);
-    logger.info('✅ MongoDB connected successfully (User Service)');
+    logger.info(' MongoDB connected successfully (User Service)');
   } catch (error) {
-    logger.error('❌ MongoDB connection failed');
+    logger.error(' MongoDB connection failed');
     process.exit(1);
   }
 }
 
-// Kafka Consumer Setup
 const kafka = new Kafka({
   clientId: config.kafka.clientId,
   brokers: config.kafka.brokers,
@@ -37,7 +38,7 @@ const consumer = kafka.consumer({ groupId: 'user-service-group' });
 async function connectKafka() {
   try {
     await consumer.connect();
-    // Subscribe to Auth Service's registration events
+
     await consumer.subscribe({ topic: 'user.registered', fromBeginning: true });
     
     await consumer.run({
@@ -47,22 +48,22 @@ async function connectKafka() {
         
         switch(topic) {
           case 'user.registered':
-            // 🐛 FIX: The Auth Service registered the user, but we MUST save them in the User Service DB too!
+
             const User = require('../models/User');
             await User.findOneAndUpdate(
               { _id: event.userId }, // Force same ID
               { name: event.name, email: event.email },
               { upsert: true, new: true }
             );
-            logger.info(`✅ Successfully saved new User ${event.userId} to User Service Database`);
+            logger.info(` Successfully saved new User ${event.userId} to User Service Database`);
             break;
         }
       },
     });
 
-    logger.info('✅ Kafka Consumer connected successfully (User Service)');
+    logger.info(' Kafka Consumer connected successfully (User Service)');
   } catch (error) {
-    logger.error('❌ Kafka connection failed', error);
+    logger.error(' Kafka connection failed', error);
   }
 }
 

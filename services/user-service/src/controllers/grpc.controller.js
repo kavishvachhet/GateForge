@@ -1,3 +1,6 @@
+/**
+ * Placeholder or minimal gRPC controller for User Service.
+ */
 const grpc = require('@grpc/grpc-js');
 const userService = require('../services/user.service');
 const { createLogger } = require('shared-lib');
@@ -26,8 +29,6 @@ class GrpcController {
     }
   }
 
-  // We could implement GetUsers, UpdateUser, etc here. 
-  // For the sake of MVP and speed, we will just implement the most important one.
 }
 
 module.exports = new GrpcController();

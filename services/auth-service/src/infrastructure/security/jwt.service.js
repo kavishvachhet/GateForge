@@ -1,3 +1,6 @@
+/**
+ * Cryptographic utility for signing and verifying JSON Web Tokens.
+ */
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const config = require('../../config');

@@ -1,3 +1,6 @@
+/**
+ * Defines global constants like Kafka topics used across the entire distributed system.
+ */
 const HTTP_STATUS = {
   OK: 200,
   CREATED: 201,

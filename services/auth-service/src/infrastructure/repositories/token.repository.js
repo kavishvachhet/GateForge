@@ -1,3 +1,6 @@
+/**
+ * Data access layer for managing refresh tokens in the database.
+ */
 const RefreshToken = require('../../domain/entities/RefreshToken');
 
 class TokenRepository {

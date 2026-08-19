@@ -1,3 +1,6 @@
+/**
+ * Mongoose schema for secure, persistent refresh token storage.
+ */
 const mongoose = require('mongoose');
 
 const refreshTokenSchema = new mongoose.Schema(
@@ -26,7 +29,6 @@ const refreshTokenSchema = new mongoose.Schema(
   }
 );
 
-// Auto-delete expired tokens (TTL index)
 refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const RefreshToken = mongoose.model('RefreshToken', refreshTokenSchema);

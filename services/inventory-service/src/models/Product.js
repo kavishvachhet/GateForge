@@ -1,3 +1,6 @@
+/**
+ * Mongoose schema representing a product and its available stock level.
+ */
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
@@ -8,7 +11,6 @@ const productSchema = new mongoose.Schema({
   category: { type: String },
 }, { timestamps: true });
 
-// Text index for searching
 productSchema.index({ name: 'text', category: 'text' });
 
 module.exports = mongoose.model('Product', productSchema);

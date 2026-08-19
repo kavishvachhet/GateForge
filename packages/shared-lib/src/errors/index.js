@@ -1,3 +1,6 @@
+/**
+ * Custom application error classes (NotFoundError, ValidationError) for standardized error handling.
+ */
 class AppError extends Error {
     constructor(message, statusCode, isOperational = true) {
     super(message);

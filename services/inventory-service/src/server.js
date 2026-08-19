@@ -1,3 +1,6 @@
+/**
+ * Entry point for the Inventory Service. Initializes HTTP, gRPC, Kafka, and Database connections.
+ */
 const app = require('./app');
 const { config, connectDB, connectKafka } = require('./config');
 const grpc = require('@grpc/grpc-js');
@@ -26,27 +29,25 @@ function startGrpcServer() {
   server.bindAsync(address, grpc.ServerCredentials.createInsecure(), (err, port) => {
     if (err) throw err;
     server.start();
-    logger.info(`✅ gRPC Server listening on port ${port} (Inventory Service)`);
+    logger.info(` gRPC Server listening on port ${port} (Inventory Service)`);
   });
 }
 
 async function bootstrap() {
   try {
     await connectDB();
-    
-    // Pass the inventoryService to the kafka config so it can reserve stock
+
     await connectKafka(inventoryService).catch(err => logger.warn('Kafka not available yet, continuing without it...'));
     
     startGrpcServer();
 
-    // Start the background reservation expiry worker (runs every 30s)
     startExpiryWorker();
     
     app.listen(config.port, () => {
-      logger.info(`✅ HTTP Server listening on port ${config.port} (Inventory Service)`);
+      logger.info(` HTTP Server listening on port ${config.port} (Inventory Service)`);
     });
   } catch (error) {
-    logger.fatal('❌ Failed to start Inventory Service', error);
+    logger.fatal(' Failed to start Inventory Service', error);
     process.exit(1);
   }
 }

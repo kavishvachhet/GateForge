@@ -1,3 +1,6 @@
+/**
+ * Express controller handling incoming HTTP requests for authentication endpoints.
+ */
 const registerUseCase = require('../../application/use-cases/register.use-case');
 const loginUseCase = require('../../application/use-cases/login.use-case');
 const refreshTokenUseCase = require('../../application/use-cases/refresh-token.use-case');
@@ -7,16 +10,14 @@ const { createSuccessResponse, ValidationError } = require('shared-lib');
 class AuthController {
   
   async register(req, res) {
-    // 1. Validate request body
+
     const { error, value } = registerSchema.validate(req.body);
     if (error) {
       throw new ValidationError(error.details[0].message);
     }
 
-    // 2. Execute use case
     const user = await registerUseCase.execute(value);
 
-    // 3. Send response
     res.status(201).json(createSuccessResponse(user));
   }
 

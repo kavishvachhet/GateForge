@@ -1,3 +1,6 @@
+/**
+ * Mongoose schema representing an authenticated user with hashed credentials.
+ */
 const mongoose = require('mongoose');
 const { ROLES } = require('shared-lib');
 

@@ -1,3 +1,6 @@
+/**
+ * Placeholder or minimal gRPC controller for Order Service inter-service communication.
+ */
 const grpc = require('@grpc/grpc-js');
 const orderService = require('../services/order.service');
 const { createLogger } = require('shared-lib');

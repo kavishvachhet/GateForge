@@ -1,3 +1,6 @@
+/**
+ * Entry point for the Order Service. Initializes HTTP, Kafka, and Database connections.
+ */
 const app = require('./app');
 const { config, connectDB, connectKafka } = require('./config');
 const grpc = require('@grpc/grpc-js');
@@ -24,7 +27,7 @@ function startGrpcServer() {
   server.bindAsync(address, grpc.ServerCredentials.createInsecure(), (err, port) => {
     if (err) throw err;
     server.start();
-    logger.info(`✅ gRPC Server listening on port ${port} (Order Service)`);
+    logger.info(` gRPC Server listening on port ${port} (Order Service)`);
   });
 }
 
@@ -36,10 +39,10 @@ async function bootstrap() {
     startGrpcServer();
     
     app.listen(config.port, () => {
-      logger.info(`✅ HTTP Server listening on port ${config.port} (Order Service)`);
+      logger.info(` HTTP Server listening on port ${config.port} (Order Service)`);
     });
   } catch (error) {
-    logger.fatal('❌ Failed to start Order Service', error);
+    logger.fatal(' Failed to start Order Service', error);
     process.exit(1);
   }
 }

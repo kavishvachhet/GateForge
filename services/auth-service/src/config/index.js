@@ -1,3 +1,6 @@
+/**
+ * Environment configuration, database URIs, and Kafka/Redis connection settings for Auth Service.
+ */
 require('dotenv').config();
 
 module.exports = {
@@ -16,7 +19,7 @@ module.exports = {
   jwt: {
     secret: process.env.JWT_SECRET || 'super_secret_jwt_key_change_me',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'super_secret_refresh_key_change_me',
-    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   }
 };

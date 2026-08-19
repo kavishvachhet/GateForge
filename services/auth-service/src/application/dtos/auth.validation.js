@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Objects and validation schemas for authentication requests.
+ */
 const Joi = require('joi');
 
 const registerSchema = Joi.object({

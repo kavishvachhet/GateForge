@@ -1,3 +1,6 @@
+/**
+ * Express application setup for the Auth Service REST API.
+ */
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -7,35 +10,29 @@ const { createLogger, AppError } = require('shared-lib');
 const logger = createLogger('auth-app');
 const app = express();
 
-// Security middlewares
 app.use(helmet());
 app.use(cors());
 
-// Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging middleware
 app.use((req, res, next) => {
   logger.info(`[${req.method}] ${req.url}`);
   next();
 });
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', service: 'auth-service' });
 });
 
-// Mount Routes
 app.use('/api/v1/auth', authRoutes);
 
-// Global Error Handler
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const message = err.isOperational ? err.message : 'Internal Server Error';
 
   if (!err.isOperational) {
-    logger.error('💥 Unhandled Error:', err);
+    logger.error(' Unhandled Error:', err);
   } else {
     logger.warn(`Operational Error: ${message}`);
   }

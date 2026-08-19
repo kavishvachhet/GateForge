@@ -1,11 +1,13 @@
+/**
+ * Express controller handling REST API requests for creating and retrieving orders.
+ */
 const orderService = require('../services/order.service');
 const { createSuccessResponse, createPaginationMeta } = require('shared-lib');
 
 class HttpController {
   
   async createOrder(req, res) {
-    // In a real app, userId comes from the authenticated token (via API Gateway)
-    // For now, we assume it's passed in the body or headers.
+
     const userId = req.headers['x-user-id'] || req.body.userId;
     const items = req.body.items;
     

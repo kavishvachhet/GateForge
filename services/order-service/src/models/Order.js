@@ -1,3 +1,6 @@
+/**
+ * Mongoose schema representing a customer order, its items, and its Saga lifecycle status.
+ */
 const mongoose = require('mongoose');
 
 const orderItemSchema = new mongoose.Schema({

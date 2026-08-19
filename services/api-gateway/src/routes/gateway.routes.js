@@ -1,3 +1,6 @@
+/**
+ * Central router for the API Gateway. Proxies incoming requests to the appropriate backend microservice.
+ */
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { config } = require('../config');
@@ -6,7 +9,6 @@ const { authLimiter } = require('../middlewares/rate-limiter');
 
 const router = express.Router();
 
-// Helper: create a proxy to a downstream service
 const proxy = (target) => createProxyMiddleware({
   target,
   changeOrigin: true,
@@ -19,11 +21,13 @@ const proxy = (target) => createProxyMiddleware({
   },
 });
 
-// Public
 router.use('/auth', /* authLimiter, */ proxy(config.services.auth)); // 10 attempts per 15 min
-router.use('/inventory', proxy(config.services.inventory));
 
-// Protected (require valid JWT)
+router.use('/inventory', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return requireAuth(req, res, next);
+}, proxy(config.services.inventory));
+
 router.use('/users', requireAuth, proxy(config.services.user));
 router.use('/orders', requireAuth, proxy(config.services.order));
 

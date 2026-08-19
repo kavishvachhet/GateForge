@@ -1,3 +1,6 @@
+/**
+ * Environment configuration and Kafka consumer setup to listen for system-wide events.
+ */
 require('dotenv').config();
 const { Kafka, logLevel } = require('kafkajs');
 const grpc = require('@grpc/grpc-js');
@@ -8,7 +11,6 @@ const notificationService = require('../services/notification.service');
 
 const logger = createLogger('notification-config');
 
-// Load User proto file
 const PROTO_PATH = path.resolve(__dirname, '../../../../packages/proto/user.proto');
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true });
 const userProto = grpc.loadPackageDefinition(packageDefinition).user;
@@ -34,8 +36,7 @@ const consumer = kafka.consumer({ groupId: 'notification-service-group' });
 async function connectKafka() {
   try {
     await consumer.connect();
-    
-    // Listen for ALL relevant events across the entire architecture
+
     await consumer.subscribe({ topic: KAFKA_TOPICS.USER_REGISTERED, fromBeginning: true });
     await consumer.subscribe({ topic: KAFKA_TOPICS.ORDER_CREATED, fromBeginning: true });
     
@@ -55,9 +56,9 @@ async function connectKafka() {
       },
     });
     
-    logger.info('✅ Kafka Consumer connected successfully (Notification Service)');
+    logger.info(' Kafka Consumer connected successfully (Notification Service)');
   } catch (error) {
-    logger.error('❌ Kafka Consumer connection failed', error);
+    logger.error(' Kafka Consumer connection failed', error);
   }
 }
 

@@ -1,3 +1,6 @@
+/**
+ * Redis-backed rate limiting middleware to prevent abuse and DDoS attacks.
+ */
 const rateLimit = require('express-rate-limit');
 const RedisStore = require('rate-limit-redis').RedisStore;
 const { redisClient } = require('../config');
@@ -25,14 +28,12 @@ const createRateLimiter = (options = {}) => {
   });
 };
 
-// Global rate limiter (generous)
 const globalLimiter = createRateLimiter({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 120, // 120 requests per minute
   prefix: 'rl:global:'
 });
 
-// Strict rate limiter for auth routes
 const authLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // 10 login attempts per 15 minutes

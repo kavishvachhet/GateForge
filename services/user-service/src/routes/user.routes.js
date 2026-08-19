@@ -1,3 +1,6 @@
+/**
+ * Express router mapping user profile endpoints to their respective controllers.
+ */
 const express = require('express');
 const httpController = require('../controllers/http.controller');
 const { asyncHandler } = require('shared-lib');

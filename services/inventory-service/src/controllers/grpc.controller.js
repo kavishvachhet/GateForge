@@ -1,3 +1,6 @@
+/**
+ * gRPC controller implementation for serving high-speed product queries.
+ */
 const grpc = require('@grpc/grpc-js');
 const inventoryService = require('../services/inventory.service');
 const { createLogger } = require('shared-lib');

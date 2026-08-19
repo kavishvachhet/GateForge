@@ -1,3 +1,6 @@
+/**
+ * Express controller handling REST API requests for product catalog and inventory management.
+ */
 const inventoryService = require('../services/inventory.service');
 const { createSuccessResponse, createPaginationMeta, UnauthorizedError } = require('shared-lib');
 
@@ -10,10 +13,8 @@ class HttpController {
     const limit = parseInt(req.query.limit) || 10;
     const category = req.query.category || '';
 
-    // Create a unique cache key based on query params
     const cacheKey = `cache:inventory:list:${page}:${limit}:${category}`;
 
-    // 1. Check Redis Cache
     const cachedData = await redisClient.get(cacheKey);
     if (cachedData) {
       console.log(`Cache HIT for ${cacheKey}`);
@@ -22,14 +23,13 @@ class HttpController {
     }
 
     console.log(`Cache MISS for ${cacheKey} `);
-    // 2. Cache MISS: Fetch from MongoDB
+
     const result = await inventoryService.listProducts(page, limit, category);
     const response = createSuccessResponse(
       result.products,
       createPaginationMeta(result.page, result.limit, result.total)
     );
 
-    // 3. Save to Redis for 60 seconds
     await redisClient.setex(cacheKey, 60, JSON.stringify(response));
 
     res.setHeader('X-Cache', 'MISS');
@@ -41,7 +41,6 @@ class HttpController {
     res.json(createSuccessResponse(product));
   }
 
-  // --- Admin Routes below ---
   _checkAdmin(req) {
     if (req.headers['x-user-role'] !== 'admin') {
       throw new UnauthorizedError('Admin access required');

@@ -1,3 +1,6 @@
+/**
+ * Express router mapping authentication endpoints to their respective controllers.
+ */
 const express = require('express');
 const authController = require('./auth.controller');
 const { asyncHandler } = require('shared-lib');

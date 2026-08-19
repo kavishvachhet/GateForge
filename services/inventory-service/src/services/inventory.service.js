@@ -1,3 +1,6 @@
+/**
+ * Core business logic for managing products, caching in Redis, and executing distributed locks for stock reservation.
+ */
 const Product = require('../models/Product');
 const { NotFoundError, ConflictError } = require('shared-lib');
 const { redisClient } = require('../config');
@@ -5,13 +8,11 @@ const { createLogger } = require('shared-lib');
 
 const logger = createLogger('inventory-service');
 
-// Redis Distributed Lock helpers
 const LOCK_TTL = 5; // seconds
 const RESERVATION_TTL = 300; // 5 minutes
 
 async function acquireLock(key, ttlSeconds = LOCK_TTL) {
-  // SET key value NX EX ttl — atomic lock acquisition
-  // Returns 'OK' if lock acquired, null if already locked
+
   const result = await redisClient.set(key, Date.now().toString(), 'EX', ttlSeconds, 'NX');
   return result === 'OK';
 }
@@ -21,7 +22,7 @@ async function releaseLock(key) {
 }
 
 class InventoryService {
-  
+
   async getProduct(id) {
     const product = await Product.findById(id);
     if (!product) throw new NotFoundError('Product not found');
@@ -31,7 +32,7 @@ class InventoryService {
   async listProducts(page = 1, limit = 10, category = null) {
     const skip = (page - 1) * limit;
     const query = category ? { category } : {};
-    
+
     const [products, total] = await Promise.all([
       Product.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
       Product.countDocuments(query)
@@ -57,16 +58,14 @@ class InventoryService {
     return { success: true, message: 'Product deleted' };
   }
 
-  // Called via Kafka when an order is created.
-  // Uses Redis Distributed Lock to prevent race conditions under high concurrency.
   async reserveStock(orderId, items) {
+
     const reservedItems = []; // Track what we've reserved for rollback on failure
 
     for (const item of items) {
       const lockKey = `lock:product:${item.productId}`;
       let lockAcquired = false;
 
-      // Retry acquiring lock up to 3 times with 100ms delay
       for (let attempt = 0; attempt < 3; attempt++) {
         lockAcquired = await acquireLock(lockKey);
         if (lockAcquired) break;
@@ -74,13 +73,13 @@ class InventoryService {
       }
 
       if (!lockAcquired) {
-        // Rollback previously reserved items
+
         await this._rollbackReservations(reservedItems);
         throw new ConflictError(`Could not acquire lock for product ${item.productId}. System busy.`);
       }
 
       try {
-        // Atomic update: only decrements stock if stock >= quantity
+
         const result = await Product.findOneAndUpdate(
           { _id: item.productId, stock: { $gte: item.quantity } },
           { $inc: { stock: -item.quantity } },
@@ -89,12 +88,11 @@ class InventoryService {
 
         if (!result) {
           await releaseLock(lockKey);
-          // Rollback previously reserved items
+
           await this._rollbackReservations(reservedItems);
           throw new ConflictError(`Failed to reserve stock for product ${item.productId}. Either not found or insufficient stock.`);
         }
 
-        // Track the reservation in Redis with 5-minute TTL
         const reservationKey = `reservation:${orderId}:${item.productId}`;
         const reservationData = JSON.stringify({
           orderId,
@@ -104,11 +102,10 @@ class InventoryService {
         });
         await redisClient.setex(reservationKey, RESERVATION_TTL, reservationData);
 
-        // Add to the active reservations set for the expiry worker to scan
         await redisClient.sadd('reservations:active', reservationKey);
 
         reservedItems.push({ productId: item.productId, quantity: item.quantity });
-        logger.info(`🔒 Reserved ${item.quantity} units of product ${item.productId} for Order ${orderId}`);
+        logger.info(` Reserved ${item.quantity} units of product ${item.productId} for Order ${orderId}`);
       } finally {
         await releaseLock(lockKey);
       }
@@ -117,39 +114,31 @@ class InventoryService {
     return true;
   }
 
-  // Rollback helper: restores stock for already-reserved items if a later item fails
   async _rollbackReservations(reservedItems) {
     for (const item of reservedItems) {
       try {
         await Product.findByIdAndUpdate(item.productId, {
           $inc: { stock: item.quantity }
         });
-        logger.warn(`↩️ Rolled back ${item.quantity} units for product ${item.productId}`);
+        logger.warn(` Rolled back ${item.quantity} units for product ${item.productId}`);
       } catch (err) {
-        logger.error(`❌ Failed to rollback stock for product ${item.productId}`, err);
+        logger.error(` Failed to rollback stock for product ${item.productId}`, err);
       }
     }
   }
 
-  // Called by the expiry worker every 30 seconds
-  // Finds expired reservations and restores stock
   async releaseExpiredReservations() {
     const activeKeys = await redisClient.smembers('reservations:active');
     let releasedCount = 0;
 
     for (const key of activeKeys) {
-      // Check if the reservation key still exists in Redis (hasn't expired yet)
+
       const data = await redisClient.get(key);
-      
+
       if (!data) {
-        // Key expired (TTL elapsed) — reservation timed out, restore stock
-        // Parse orderId and productId from key format: reservation:{orderId}:{productId}
+
         const parts = key.split(':');
-        // We need the reservation data, but it's gone. 
-        // We stored it in a backup hash before TTL expiry approach won't work.
-        // Better approach: use a sorted set with timestamps instead.
-        
-        // Remove from active set since the key is gone
+
         await redisClient.srem('reservations:active', key);
         continue;
       }
@@ -157,7 +146,6 @@ class InventoryService {
       const reservation = JSON.parse(data);
       const elapsed = Date.now() - reservation.reservedAt;
 
-      // If more than 5 minutes have passed (shouldn't happen if TTL works, but safety check)
       if (elapsed > RESERVATION_TTL * 1000) {
         try {
           await Product.findByIdAndUpdate(reservation.productId, {
@@ -166,26 +154,25 @@ class InventoryService {
           await redisClient.del(key);
           await redisClient.srem('reservations:active', key);
           releasedCount++;
-          logger.info(`⏰ Expired reservation released: ${reservation.quantity} units of product ${reservation.productId} for Order ${reservation.orderId}`);
+          logger.info(` Expired reservation released: ${reservation.quantity} units of product ${reservation.productId} for Order ${reservation.orderId}`);
         } catch (err) {
-          logger.error(`❌ Failed to release expired reservation ${key}`, err);
+          logger.error(` Failed to release expired reservation ${key}`, err);
         }
       }
     }
 
     if (releasedCount > 0) {
-      logger.info(`⏰ Released ${releasedCount} expired reservations`);
+      logger.info(` Released ${releasedCount} expired reservations`);
     }
   }
 
-  // Called when payment is confirmed — removes the reservation so expiry worker won't release it
   async commitReservation(orderId, items) {
     for (const item of items) {
       const reservationKey = `reservation:${orderId}:${item.productId}`;
       await redisClient.del(reservationKey);
       await redisClient.srem('reservations:active', reservationKey);
     }
-    logger.info(`✅ Committed reservation for Order ${orderId} — stock permanently deducted`);
+    logger.info(` Committed reservation for Order ${orderId} — stock permanently deducted`);
   }
 }
 

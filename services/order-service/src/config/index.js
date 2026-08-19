@@ -1,3 +1,6 @@
+/**
+ * Environment configuration, MongoDB connection, and Kafka consumer setup for processing Saga compensating events.
+ */
 require('dotenv').config();
 const mongoose = require('mongoose');
 const { Kafka, logLevel } = require('kafkajs');
@@ -8,7 +11,6 @@ const { createLogger, KAFKA_TOPICS } = require('shared-lib');
 
 const logger = createLogger('order-config');
 
-// Load Inventory proto file
 const PROTO_PATH = path.resolve(__dirname, '../../../../packages/proto/inventory.proto');
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true });
 const inventoryProto = grpc.loadPackageDefinition(packageDefinition).inventory;
@@ -28,9 +30,9 @@ const config = {
 async function connectDB() {
   try {
     await mongoose.connect(config.mongoUri);
-    logger.info('✅ MongoDB connected successfully (Order Service)');
+    logger.info(' MongoDB connected successfully (Order Service)');
   } catch (error) {
-    logger.error('❌ MongoDB connection failed');
+    logger.error(' MongoDB connection failed');
     process.exit(1);
   }
 }
@@ -45,11 +47,10 @@ const consumer = kafka.consumer({ groupId: 'order-service-group' });
 
 async function connectKafka() {
   try {
-    // Connect producer (for publishing ORDER_CREATED events)
-    await producer.connect();
-    logger.info('✅ Kafka Producer connected successfully (Order Service)');
 
-    // Connect consumer (for receiving compensating events from Inventory Service)
+    await producer.connect();
+    logger.info(' Kafka Producer connected successfully (Order Service)');
+
     await consumer.connect();
     await consumer.subscribe({ topic: KAFKA_TOPICS.ORDER_FAILED, fromBeginning: true });
     await consumer.subscribe({ topic: KAFKA_TOPICS.INVENTORY_RESERVED, fromBeginning: true });
@@ -59,8 +60,7 @@ async function connectKafka() {
         const event = JSON.parse(message.value.toString());
         logger.info(`Received event from ${topic} for Order ${event.orderId}`);
 
-        // Lazy-load to avoid circular dependency
-        const orderService = require('./services/order.service');
+        const orderService = require('../services/order.service');
 
         switch (topic) {
           case KAFKA_TOPICS.ORDER_FAILED:
@@ -73,9 +73,9 @@ async function connectKafka() {
       },
     });
 
-    logger.info('✅ Kafka Consumer connected successfully (Order Service)');
+    logger.info(' Kafka Consumer connected successfully (Order Service)');
   } catch (error) {
-    logger.error('❌ Kafka connection failed', error);
+    logger.error(' Kafka connection failed', error);
   }
 }
 

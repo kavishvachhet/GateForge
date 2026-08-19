@@ -1,4 +1,6 @@
-
+/**
+ * Type definitions and enums shared across the microservices.
+ */
 function createSuccessResponse(data,meta = {}){
     return {
         success:true,

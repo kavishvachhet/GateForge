@@ -1,3 +1,6 @@
+/**
+ * Kafka producer configuration for emitting authentication-related domain events.
+ */
 const { Kafka, logLevel } = require('kafkajs');
 const config = require('../../config');
 const { createLogger } = require('shared-lib');
@@ -15,9 +18,9 @@ const producer = kafka.producer();
 async function connectKafka() {
   try {
     await producer.connect();
-    logger.info('✅ Kafka Producer connected successfully (Auth Service)');
+    logger.info(' Kafka Producer connected successfully (Auth Service)');
   } catch (error) {
-    logger.error('❌ Kafka connection failed');
+    logger.error(' Kafka connection failed');
     logger.error(error);
   }
 }
