@@ -104,6 +104,32 @@ npm install
 npm run dev:all
 ```
 
+## Monitoring & Debugging
+
+**Kafka UI Dashboard:** [http://localhost:8080](http://localhost:8080) — view topics, messages, consumer groups, and lag in real-time.
+
+**Kafka Console Consumers** (run in separate terminals to watch events live):
+
+```bash
+# Watch order creation events
+docker exec -it ms_kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic order.created --from-beginning
+
+# Watch inventory reservation events
+docker exec -it ms_kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic inventory.reserved --from-beginning
+
+# Watch order failure events
+docker exec -it ms_kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic order.failed --from-beginning
+
+# Watch user registration events
+docker exec -it ms_kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic user.registered --from-beginning
+```
+
+**Redis Monitor** (watch cache hits and session activity):
+
+```bash
+docker exec -it ms_redis redis-cli MONITOR
+```
+
 ## API Routes
 
 | Method | Route | Auth | Service |
