@@ -8,7 +8,7 @@ const { createLogger } = require('shared-lib');
 const logger = createLogger('order-grpc');
 
 class GrpcController {
-  
+
   async getOrder(call, callback) {
     try {
       const order = await orderService.getOrder(call.request.id);
@@ -26,11 +26,16 @@ class GrpcController {
         updatedAt: order.updatedAt.toISOString()
       });
     } catch (error) {
-      logger.error('gRPC getOrder failed:', error.message);
-      callback({
-        code: error.name === 'NotFoundError' ? grpc.status.NOT_FOUND : grpc.status.INTERNAL,
-        details: error.message,
-      });
+      logger.error(`gRPC getOrder failed: ${error.message}`);
+      if (error.name === 'CastError' || error.name === 'NotFoundError') {
+        const err = new Error('The requested order could not be found or the Order ID is invalid.');
+        err.code = grpc.status.NOT_FOUND;
+        return callback(err);
+      }
+
+      const err = new Error('An internal server error occurred.');
+      err.code = grpc.status.INTERNAL;
+      callback(err);
     }
   }
 }
