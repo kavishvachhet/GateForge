@@ -10,7 +10,7 @@ const logger = createLogger('gateway-config');
 const config = {
   port: process.env.API_GATEWAY_PORT || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
-  
+
   services: {
     auth: process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
     user: process.env.USER_SERVICE_URL || 'http://localhost:3002',

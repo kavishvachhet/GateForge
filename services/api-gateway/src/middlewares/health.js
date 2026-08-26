@@ -15,11 +15,10 @@ const logger = createLogger('tcp-health-probe');
 class HealthChecker {
     /**
      * @param {Array<{host: string, port: number}>} backends 
-     * @param {number} intervalMs - How often to ping
+     * @param {number} intervalMs 
      */
     constructor(backends, intervalMs = 5000) {
-        // Add a state flag to each backend
-        this.backends = backends.map(b => ({ ...b, isUp: false }));
+        this.backends = backends.map(b => ({ ...b, isUp: null }));
         this.intervalMs = intervalMs;
         this.timer = null;
     }

@@ -12,7 +12,7 @@ const getTarget = (urlStr) => {
   return { host: url.hostname, port: parseInt(url.port || '80', 10) };
 };
 
-const authHC = new HealthChecker([getTarget(config.services.auth)], 5000);
+const authHC = new HealthChecker([getTarget(config.services.auth), getTarget('http://localhost:8001')], 5000);
 const inventoryHC = new HealthChecker([getTarget(config.services.inventory)], 5000);
 const userHC = new HealthChecker([getTarget(config.services.user)], 5000);
 const orderHC = new HealthChecker([getTarget(config.services.order)], 5000);
