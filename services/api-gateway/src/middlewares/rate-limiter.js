@@ -1,43 +1,79 @@
-/**
- * Redis-backed rate limiting middleware to prevent abuse and DDoS attacks.
- */
-const rateLimit = require('express-rate-limit');
-const RedisStore = require('rate-limit-redis').RedisStore;
-const { redisClient } = require('../config');
 
-/**
- * Creates a rate limiter middleware backed by Redis.
- * Because we use Redis, the rate limit is shared across all instances of the API Gateway if scaled.
- */
-const createRateLimiter = (options = {}) => {
-  return rateLimit({
-    windowMs: options.windowMs || 15 * 60 * 1000, // Default: 15 minutes
-    max: options.max || 100, // Default: 100 requests per windowMs
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    store: new RedisStore({
-      sendCommand: (...args) => redisClient.call(...args),
-      prefix: options.prefix || 'rl:', // Allows us to have different limits for different routes
-    }),
-    handler: (req, res) => {
-      res.status(429).json({
-        success: false,
-        errors: [{ message: 'Too many requests, please try again later.', statusCode: 429 }]
-      });
+const { redisClient } = require('../config');
+const { createLogger } = require('shared-lib');
+
+const logger = createLogger('rate-limiter');
+
+
+const LUA_SCRIPT = `
+  local prev = tonumber(redis.call('GET', KEYS[1]) or '0') or 0
+  local curr = tonumber(redis.call('GET', KEYS[2]) or '0') or 0
+  local limit = tonumber(ARGV[1])
+  local window = tonumber(ARGV[2])
+  local elapsed = tonumber(ARGV[3])
+
+  local weight = math.max(0, 1 - (elapsed / window))
+  local total = (prev * weight) + curr
+
+  if total >= limit then
+    return {0, math.ceil(window - elapsed)}
+  end
+
+  redis.call('INCR', KEYS[2])
+  redis.call('EXPIRE', KEYS[2], window * 2)
+
+  return {1, 0}
+`;
+
+function createRateLimiter({ windowMs, max, prefix, keyType = 'ip', message }) {
+  const windowSec = windowMs / 1000;
+
+  return async (req, res, next) => {
+    try {
+      const id = keyType === 'user' ? (req.headers['x-user-id'] || req.ip) : req.ip;
+      const now = Date.now();
+      const windowStart = Math.floor(now / windowMs) * windowMs;
+      const elapsed = (now - windowStart) / 1000;
+
+      const prevKey = `${prefix}${id}:${windowStart - windowMs}`;
+      const currKey = `${prefix}${id}:${windowStart}`;
+
+      const [allowed, retryAfter] = await redisClient.eval(
+        LUA_SCRIPT, 2, prevKey, currKey, max, windowSec, elapsed
+      );
+
+      if (!allowed) {
+        logger.warn(`Rate limit hit | ${prefix} | ${id}`);
+        res.set('Retry-After', String(retryAfter));
+        return res.status(429).json({
+          success: false,
+          errors: [{ message: message || 'Too many requests.', statusCode: 429 }],
+        });
+      }
+
+      next();
+    } catch (err) {
+      logger.error('Rate limiter error:', err.message);
+      next();
     }
-  });
-};
+  };
+}
 
 const globalLimiter = createRateLimiter({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 120, // 120 requests per minute
-  prefix: 'rl:global:'
+  windowMs: 60 * 1000, max: 120,
+  prefix: 'rl:global:', keyType: 'ip',
 });
 
 const authLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 login attempts per 15 minutes
-  prefix: 'rl:auth:'
+  windowMs: 15 * 60 * 1000, max: 10,
+  prefix: 'rl:auth:', keyType: 'ip',
+  message: 'Too many login attempts. Try again later.',
 });
 
-module.exports = { globalLimiter, authLimiter };
+const orderLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000, max: 30,
+  prefix: 'rl:orders:', keyType: 'user',
+  message: 'Order limit exceeded. Max 30 orders per hour.',
+});
+
+module.exports = { createRateLimiter, globalLimiter, authLimiter, orderLimiter };
