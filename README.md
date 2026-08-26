@@ -109,6 +109,19 @@ npm install
 npm run dev:all
 ```
 
+### Testing the Load Balancer (Round Robin)
+To physically verify the Custom L7 Round Robin router and L4 TCP Health Probes, you can spin up a second instance of the Auth Service on a different port. 
+
+Open a new PowerShell terminal and run:
+```powershell
+# 1. Bypass PowerShell execution policy
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+# 2. Start the second Auth Service instance
+$env:AUTH_SERVICE_PORT="8001"; $env:AUTH_GRPC_PORT="50061"; npm run dev -w services/auth-service
+```
+The API Gateway will automatically detect the new port via TCP probes and perfectly distribute your `POST /api/v1/auth/register` requests between `3001` and `8001`!
+
 ## Monitoring & Debugging
 
 **Kafka UI Dashboard:** [http://localhost:8080](http://localhost:8080) — view topics, messages, consumer groups, and lag in real-time.
