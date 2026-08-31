@@ -1,6 +1,6 @@
 # GateForge
 
-A production-grade microservices backend built to understand how real-world distributed systems work — API Gateway pattern, gRPC for inter-service communication, Kafka for event-driven architecture, and Redis for caching. Features custom-built infrastructure components like a Redis Lua Sliding Window rate limiter and a Layer 4 TCP Health Probe load balancer.
+A production-grade microservices backend built to understand how real-world distributed systems work — API Gateway pattern, gRPC for inter-service communication, Kafka for event-driven architecture, and Redis for caching and rate limiting.
 
 ## Why I Built This
 
@@ -13,7 +13,7 @@ graph TB
     Client["🌐 Client"]
 
     subgraph Gateway["API Gateway :3000"]
-        GW["Custom Rate Limiting<br/>JWT Auth<br/>TCP Health Probes<br/>L7 Load Balancer"]
+        GW["Rate Limiting · JWT Auth · Reverse Proxy"]
     end
 
     subgraph Services["Microservices"]
@@ -31,16 +31,16 @@ graph TB
     end
 
     Client -->|"HTTP"| GW
-    GW -.->|"TCP Probe (L4)"| AUTH
-    GW -.->|"TCP Probe (L4)"| USER
-    GW -.->|"TCP Probe (L4)"| ORDER
-    GW -.->|"TCP Probe (L4)"| INVY
+
+
+
+
     GW -->|"gRPC: ValidateToken"| AUTH
-    GW -->|"Round Robin Proxy (L7)"| AUTH
-    GW -->|"Round Robin Proxy (L7)"| USER
-    GW -->|"Round Robin Proxy (L7)"| ORDER
-    GW -->|"Round Robin Proxy (L7)"| INVY
-    GW -->|"Round Robin Proxy (L7)"| NOTIF
+    GW -->|"HTTP Proxy"| AUTH
+    GW -->|"HTTP Proxy"| USER
+    GW -->|"HTTP Proxy"| ORDER
+    GW -->|"HTTP Proxy"| INVY
+    GW -->|"HTTP Proxy"| NOTIF
 
     ORDER --->|"gRPC: GetProduct\n(validate, check stock, fetch price)"| INVY
     NOTIF --->|"gRPC: GetUser\n(fetch email for confirmation)"| USER
@@ -71,8 +71,8 @@ graph TB
 | Database | MongoDB (per-service) |
 | Cache | Redis |
 | Auth | JWT (access + refresh tokens) |
-| Rate Limiting | Custom Redis Lua Script (Sliding Window Counter) |
-| Load Balancing | Custom L4 TCP Health Probes + Round Robin Router |
+| Rate Limiting | Redis-backed (express-rate-limit) |
+
 | Monorepo | npm workspaces |
 
 ## Project Structure
@@ -108,19 +108,6 @@ npm install
 # 4. Start all services
 npm run dev:all
 ```
-
-### Testing the Load Balancer (Round Robin)
-To physically verify the Custom L7 Round Robin router and L4 TCP Health Probes, you can spin up a second instance of the Auth Service on a different port. 
-
-Open a new PowerShell terminal and run:
-```powershell
-# 1. Bypass PowerShell execution policy
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-
-# 2. Start the second Auth Service instance
-$env:AUTH_SERVICE_PORT="8001"; $env:AUTH_GRPC_PORT="50061"; npm run dev -w services/auth-service
-```
-The API Gateway will automatically detect the new port via TCP probes and perfectly distribute your `POST /api/v1/auth/register` requests between `3001` and `8001`!
 
 ## Monitoring & Debugging
 
@@ -163,10 +150,10 @@ docker exec -it ms_redis redis-cli MONITOR
 ## Request Flow
 
 **Creating an Order:**
-1. Client → API Gateway (atomic Redis Lua rate limit check)
+1. Client → API Gateway (rate limit check)
 2. Gateway → Auth Service via **gRPC** (validate JWT)
-3. Gateway verifies in-memory TCP health status of Order nodes
-4. Gateway → Order Service via **Load Balanced HTTP proxy** (create order)
+3. Gateway → Order Service via **HTTP proxy** (create order)
+
 4. Order Service → Inventory Service via **gRPC** (validate product exists, check stock, fetch real price)
 5. Order Service calculates `totalAmount = price × quantity` (ignores frontend price)
 6. Order Service → **Kafka** (publish `order.created`)
