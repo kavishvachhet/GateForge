@@ -42,7 +42,8 @@ class HttpController {
   }
 
   _checkAdmin(req) {
-    if (req.headers['x-user-role'] !== 'admin') {
+    const role = req.headers['x-user-role'] || '';
+    if (role.toLowerCase() !== 'admin') {
       throw new UnauthorizedError('Admin access required');
     }
   }

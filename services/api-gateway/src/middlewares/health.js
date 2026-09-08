@@ -38,9 +38,9 @@ class HealthChecker {
             this.checkTcp(backend.host, backend.port, (isUp) => {
                 // Only log if the state actually changed
                 if (backend.isUp !== isUp) {
-                    logger.info(
-                        `[Health] ${backend.host}:${backend.port} is now ${isUp ? '🟢 UP' : '🔴 DOWN'}`
-                    );
+                    // logger.info(
+                    //     `[Health] ${backend.host}:${backend.port} is now ${isUp ? '🟢 UP' : '🔴 DOWN'}`
+                    // );
                     this.backends[index].isUp = isUp;
                 }
             });

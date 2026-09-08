@@ -1,23 +1,19 @@
 /**
  * Express controller handling incoming HTTP requests for authentication endpoints.
  */
-const registerUseCase = require('../../application/use-cases/register.use-case');
-const loginUseCase = require('../../application/use-cases/login.use-case');
-const refreshTokenUseCase = require('../../application/use-cases/refresh-token.use-case');
-const { registerSchema, loginSchema, refreshTokenSchema } = require('../../application/dtos/auth.validation');
+const authService = require('../services/auth.service');
+const { registerSchema, loginSchema, refreshTokenSchema } = require('../middlewares/auth.validation');
 const { createSuccessResponse, ValidationError } = require('shared-lib');
 
-class AuthController {
-  
-  async register(req, res) {
+class HttpController {
 
+  async register(req, res) {
     const { error, value } = registerSchema.validate(req.body);
     if (error) {
       throw new ValidationError(error.details[0].message);
     }
 
-    const user = await registerUseCase.execute(value);
-
+    const user = await authService.register(value);
     res.status(201).json(createSuccessResponse(user));
   }
 
@@ -27,7 +23,7 @@ class AuthController {
       throw new ValidationError(error.details[0].message);
     }
 
-    const result = await loginUseCase.execute(value.email, value.password);
+    const result = await authService.login(value.email, value.password);
     res.status(200).json(createSuccessResponse(result));
   }
 
@@ -37,9 +33,9 @@ class AuthController {
       throw new ValidationError(error.details[0].message);
     }
 
-    const result = await refreshTokenUseCase.execute(value.refreshToken);
+    const result = await authService.refreshToken(value.refreshToken);
     res.status(200).json(createSuccessResponse(result));
   }
 }
 
-module.exports = new AuthController();
+module.exports = new HttpController();

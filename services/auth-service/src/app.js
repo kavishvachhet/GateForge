@@ -4,7 +4,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const authRoutes = require('./presentation/http/auth.routes');
+const authRoutes = require('./routes/auth.routes');
 const { createLogger, AppError } = require('shared-lib');
 
 const logger = createLogger('auth-app');

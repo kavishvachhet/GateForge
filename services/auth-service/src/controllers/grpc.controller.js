@@ -1,18 +1,18 @@
 /**
- * gRPC handler implementation for high-speed token validation requests from the API Gateway.
+ * gRPC handler for high-speed token validation requests from the API Gateway.
  */
 const grpc = require('@grpc/grpc-js');
-const validateTokenUseCase = require('../../application/use-cases/validate-token.use-case');
+const authService = require('../services/auth.service');
 const { createLogger } = require('shared-lib');
 
 const logger = createLogger('auth-grpc');
 
-class AuthGrpcHandler {
+class GrpcController {
   async validateToken(call, callback) {
     try {
       const token = call.request.token;
 
-      const decoded = await validateTokenUseCase.execute(token);
+      const decoded = await authService.validateToken(token);
 
       callback(null, {
         valid: true,
@@ -29,7 +29,6 @@ class AuthGrpcHandler {
       });
     }
   }
-
 }
 
-module.exports = new AuthGrpcHandler();
+module.exports = new GrpcController();
